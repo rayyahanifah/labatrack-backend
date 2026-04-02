@@ -1,9 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+
+// Panggil konfigurasi DB (sesuaikan dengan kodemu)
 const db = require('./config/db');
-const authRoutes = require('./routes/authRoutes'); // 1. Panggil rute di atas
-const productRoutes = require('./routes/productRoutes');
+
+// 1. Panggil semua routes
+const authRoutes = require('./routes/authRoutes');
+const productRoutes = require('./routes/productRoutes'); // Tetap ada untuk CRUD produk nanti
+const hppCalculatorRoutes = require('./routes/hppCalculatorRoutes'); // Rute baru untuk kalkulator
 const transactionRoutes = require('./routes/transactionRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 
@@ -16,6 +21,7 @@ app.use(express.json());
 // 2. Pasang rute SEBELUM app.listen
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/hpp-calculator', hppCalculatorRoutes); // Endpoint: /api/hpp-calculator
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/reports', reportRoutes);
 
