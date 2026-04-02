@@ -7,7 +7,7 @@ Sistem Manajemen Keuangan UMKM untuk memantau laba dan stok secara real-time.
 - **POS System:** Transaksi penjualan & perhitungan laba bersih
 - **Streak System:** Motivasi jualan harian (Daily Streak)
 - **Reports:** Summary total omzet dan laba
-- **HPP Calculator:** Make calculations of the COGS and the profit that will be obtained
+- **HPP Calculator:** Making cost of goods sold calculations and profit estimates
 
  **🛠️ Tech Stack:**
 - Node.js & Express
