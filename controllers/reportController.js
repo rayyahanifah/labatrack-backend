@@ -1,41 +1,46 @@
+const supabase = require('../config/supabase');
+
 exports.getSummary = async (req, res) => {
     try {
         const user_id = req.user.id;
 
-        // Ambil range waktu hari ini
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
+        // Ambil tanggal hari ini (YYYY-MM-DD)
+        const today = new Date().toLocaleDateString('en-CA');
 
-        // 1. Ambil transaksi hari ini
+        // 1. Ambil transaksi hari ini (LEBIH AMAN pakai transaction_date)
         const { data: transactions, error: txErr } = await supabase
             .from('transactions')
             .select('*')
             .eq('user_id', user_id)
-            .gte('created_at', startOfDay.toISOString())
-            .lte('created_at', endOfDay.toISOString())
+            .eq('transaction_date', today)
             .order('created_at', { ascending: false });
 
         if (txErr) throw txErr;
 
-        // 2. Ambil detail transaksi (Produk Terjual)
+        console.log("Transactions:", transactions);
+
+        // 2. Ambil total produk terjual (PAKAI JOIN 🔥)
         let totalUnitTerjual = 0;
-        if (transactions.length > 0) {
-            // Ambil semua ID transaksi hari ini
-            const txIds = transactions.map(t => t.id);
 
-            const { data: details, error: detErr } = await supabase
-                .from('transaction_details')
-                .select('quantity')
-                .in('transaction_id', txIds); // Filter berdasarkan ID transaksi yang kita dapat tadi
+        const { data: details, error: detErr } = await supabase
+            .from('transaction_details')
+            .select(`
+                quantity,
+                transactions!inner(user_id, transaction_date)
+            `)
+            .eq('transactions.user_id', user_id)
+            .eq('transactions.transaction_date', today);
 
-            if (detErr) throw detErr;
-            
-            totalUnitTerjual = details.reduce((acc, curr) => acc + (parseInt(curr.quantity) || 0), 0);
-        }
+        if (detErr) throw detErr;
 
-        // 3. Ambil data produk (Sisa Stok)
+        console.log("Details:", details);
+
+        totalUnitTerjual = details.reduce(
+            (acc, curr) => acc + (parseInt(curr.quantity) || 0),
+            0
+        );
+
+        // 3. Ambil total stok
         const { data: products, error: prodErr } = await supabase
             .from('products')
             .select('stock')
@@ -43,8 +48,17 @@ exports.getSummary = async (req, res) => {
 
         if (prodErr) throw prodErr;
 
-        const totalLaba = transactions.reduce((acc, curr) => acc + (parseFloat(curr.total_profit) || 0), 0);
-        const totalSisaStok = products.reduce((acc, curr) => acc + (parseInt(curr.stock) || 0), 0);
+        console.log("Products:", products);
+
+        const totalLaba = transactions.reduce(
+            (acc, curr) => acc + (parseFloat(curr.total_profit) || 0),
+            0
+        );
+
+        const totalSisaStok = products.reduce(
+            (acc, curr) => acc + (parseInt(curr.stock) || 0),
+            0
+        );
 
         res.status(200).json({
             stats: {

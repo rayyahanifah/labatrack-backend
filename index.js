@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 3000;
 
 // Update CORS agar bisa menerima cookie dari frontend
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Ganti dengan URL frontend kamu
+    origin: process.env.FRONTEND_URL || "https://labatrack-frontend.vercel.app", // Ganti dengan URL frontend kamu
     credentials: true // Penting untuk mengizinkan cookie
 }));
 
