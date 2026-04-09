@@ -64,6 +64,8 @@ exports.login = async (req, res) => {
         // Simpan ke Cookie
         res.cookie('jwt', token, { 
             httpOnly: true, 
+            secure: true,
+            sameSite: 'none',
             maxAge: 3 * 24 * 60 * 60 * 1000 
         });
 
