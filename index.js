@@ -3,7 +3,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser'); // Tambahan
 require('dotenv').config();
 
-const db = require('./config/db');
+const db = require('./config/supabase');
 
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
