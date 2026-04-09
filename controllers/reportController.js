@@ -1,29 +1,77 @@
-const db = require('../config/db');
+const supabase = require('../config/supabase');
 
-exports.getSummary = (req, res) => {
-    const { user_id } = req.query;
+exports.getSummary = async (req, res) => {
+    try {
+        const user_id = req.user.id;
 
-    // Query untuk hitung Total Omzet, Total Laba, dan Jumlah Transaksi
-    const sql = `
-        SELECT 
-            SUM(total_amount) as total_omzet, 
-            SUM(total_profit) as total_laba, 
-            COUNT(id) as total_transaksi 
-        FROM transactions 
-        WHERE user_id = ?
-    `;
+        // Ambil tanggal hari ini (YYYY-MM-DD)
+        const today = new Date().toLocaleDateString('en-CA');
 
-    db.query(sql, [user_id], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        
-        const summary = result[0];
+        // 1. Ambil transaksi hari ini (LEBIH AMAN pakai transaction_date)
+        const { data: transactions, error: txErr } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', user_id)
+            .eq('transaction_date', today)
+            .order('created_at', { ascending: false });
+
+        if (txErr) throw txErr;
+
+        console.log("Transactions:", transactions);
+
+        // 2. Ambil total produk terjual (PAKAI JOIN 🔥)
+        let totalUnitTerjual = 0;
+
+        const { data: details, error: detErr } = await supabase
+            .from('transaction_details')
+            .select(`
+                quantity,
+                transactions!inner(user_id, transaction_date)
+            `)
+            .eq('transactions.user_id', user_id)
+            .eq('transactions.transaction_date', today);
+
+        if (detErr) throw detErr;
+
+        console.log("Details:", details);
+
+        totalUnitTerjual = details.reduce(
+            (acc, curr) => acc + (parseInt(curr.quantity) || 0),
+            0
+        );
+
+        // 3. Ambil total stok
+        const { data: products, error: prodErr } = await supabase
+            .from('products')
+            .select('stock')
+            .eq('user_id', user_id);
+
+        if (prodErr) throw prodErr;
+
+        console.log("Products:", products);
+
+        const totalLaba = transactions.reduce(
+            (acc, curr) => acc + (parseFloat(curr.total_profit) || 0),
+            0
+        );
+
+        const totalSisaStok = products.reduce(
+            (acc, curr) => acc + (parseInt(curr.stock) || 0),
+            0
+        );
+
         res.status(200).json({
-            message: "Data Laporan Berhasil Ditarik!",
-            data: {
-                omzet: summary.total_omzet || 0,
-                laba: summary.total_laba || 0,
-                jumlah_penjualan: summary.total_transaksi || 0
-            }
+            stats: {
+                labaHariIni: totalLaba,
+                transaksiHariIni: transactions.length,
+                totalProduk: totalSisaStok,
+                produkTerjual: totalUnitTerjual
+            },
+            recent: transactions.slice(0, 5)
         });
-    });
+
+    } catch (error) {
+        console.error("Error Detail:", error);
+        res.status(500).json({ error: error.message });
+    }
 };

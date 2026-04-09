@@ -3,7 +3,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser'); // Tambahan
 require('dotenv').config();
 
-const db = require('./config/db');
+const db = require('./config/supabase');
 
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
@@ -16,8 +16,8 @@ const PORT = process.env.PORT || 3000;
 
 // Update CORS agar bisa menerima cookie dari frontend
 app.use(cors({
-    origin: 'http://localhost:5173', // Ganti dengan URL Frontend kamu (misal React/Vite)
-    credentials: true // Wajib true agar cookie bisa dikirim lintas port
+    origin: process.env.FRONTEND_URL || "https://labatrack-frontend.vercel.app", // Ganti dengan URL frontend kamu
+    credentials: true // Penting untuk mengizinkan cookie
 }));
 
 app.use(express.json());

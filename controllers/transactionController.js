@@ -1,79 +1,108 @@
-const db = require('../config/db');
+const supabase = require('../config/supabase');
 
-exports.createTransaction = (req, res) => {
-    const { user_id, items, payment_method } = req.body;
+exports.createTransaction = async (req, res) => {
+    try {
+        const { items, payment_method } = req.body;
+        const user_id = req.user.id; // Ambil dari token JWT (Middleware)
 
-    const productIds = items.map(item => item.product_id);
-    const sqlGetProducts = "SELECT id, base_price, sell_price, stock FROM products WHERE id IN (?)";
+        // 1. Ambil data produk untuk hitung laba & cek stok
+        const productIds = items.map(item => item.product_id);
+        const { data: products, error: prodErr } = await supabase
+            .from('products')
+            .select('id, base_price, sell_price, stock')
+            .in('id', productIds);
 
-    db.query(sqlGetProducts, [productIds], (err, products) => {
-        if (err) return res.status(500).json({ error: "Gagal ambil data produk: " + err.message });
+        if (prodErr) throw prodErr;
 
-        let total_amount = 0;
-        let total_profit = 0;
+        // Buat map produk supaya gampang dicari
         const productMap = {};
         products.forEach(p => { productMap[p.id] = p; });
 
+        let total_amount = 0;
+        let total_profit = 0;
+
+        // Hitung total omzet dan total laba
         items.forEach(item => {
             const p = productMap[item.product_id];
             if (p) {
-                const subtotal = item.quantity * item.price;
-                const profit = (item.price - p.base_price) * item.quantity;
+                const subtotal = item.quantity * p.sell_price;
+                const profit = (p.sell_price - p.base_price) * item.quantity;
                 total_amount += subtotal;
                 total_profit += profit;
-                item.calculated_subtotal = subtotal; 
+                item.subtotal = subtotal; // Simpan untuk insert detail nanti
             }
         });
 
-        const sqlTx = "INSERT INTO transactions (user_id, total_amount, total_profit, payment_method) VALUES (?, ?, ?, ?)";
-        db.query(sqlTx, [user_id, total_amount, total_profit, payment_method], (err, result) => {
-            if (err) return res.status(500).json({ error: "Gagal simpan transaksi: " + err.message });
+        // 2. Simpan Header Transaksi
+        const { data: txData, error: txErr } = await supabase
+            .from('transactions')
+            .insert([{ 
+                user_id, 
+                total_amount, 
+                total_profit, 
+                payment_method,
+                transaction_date: new Date().toISOString().split('T')[0] 
+            }])
+            .select()
+            .single();
 
-            const transaction_id = result.insertId;
+        if (txErr) throw txErr;
+        const transaction_id = txData.id;
 
-            const detailPromises = items.map(item => {
-                return new Promise((resolve, reject) => {
-                    const sqlDetail = "INSERT INTO transaction_details (transaction_id, product_id, quantity, subtotal) VALUES (?, ?, ?, ?)";
-                    db.query(sqlDetail, [transaction_id, item.product_id, item.quantity, item.calculated_subtotal], (err) => {
-                        if (err) return reject(err);
-                        const sqlUpdateStock = "UPDATE products SET stock = stock - ? WHERE id = ?";
-                        db.query(sqlUpdateStock, [item.quantity, item.product_id], (err) => {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                    });
-                });
-            });
+        // 3. Simpan Detail Transaksi & Update Stok
+        for (const item of items) {
+            // Insert Detail
+            await supabase.from('transaction_details').insert([{
+                transaction_id,
+                product_id: item.product_id,
+                quantity: item.quantity,
+                subtotal: item.subtotal
+            }]);
 
-            Promise.all(detailPromises)
-                .then(() => {
-                    // --- LOGIKA STREAK DIMULAI DI SINI ---
-                    const today = new Date().toISOString().slice(0, 10);
-                    const sqlCheckStreak = "SELECT * FROM streaks WHERE user_id = ?";
-                    
-                    db.query(sqlCheckStreak, [user_id], (err, streakResult) => {
-                        if (streakResult.length === 0) {
-                            db.query("INSERT INTO streaks (user_id, current_streak, last_transaction_date) VALUES (?, 1, ?)", [user_id, today]);
-                        } else {
-                            const lastDate = new Date(streakResult[0].last_transaction_date).toISOString().slice(0, 10);
-                            if (lastDate !== today) {
-                                db.query("UPDATE streaks SET current_streak = current_streak + 1, last_transaction_date = ? WHERE user_id = ?", [today, user_id]);
-                            }
-                        }
+            // Update Stok (PostgreSQL style: decrement)
+            const p = productMap[item.product_id];
+            await supabase
+                .from('products')
+                .update({ stock: p.stock - item.quantity })
+                .eq('id', item.product_id);
+        }
 
-                        // Respon dikirim SETELAH streak diproses
-                        res.status(201).json({ 
-                            message: "Transaksi Berhasil!", 
-                            transactionId: transaction_id,
-                            total_bayar: total_amount,
-                            total_laba: total_profit
-                        });
-                    });
-                    // --- LOGIKA STREAK SELESAI ---
-                })
-                .catch(detailErr => {
-                    res.status(500).json({ error: "Gagal update detail/stok: " + detailErr.message });
-                });
+        // 4. LOGIKA STREAK
+        const today = new Date().toISOString().split('T')[0];
+        const { data: streakData } = await supabase
+            .from('streaks')
+            .select('*')
+            .eq('user_id', user_id)
+            .single();
+
+        if (!streakData) {
+            // Jika belum ada record streak, buat baru
+            await supabase.from('streaks').insert([{ 
+                user_id, 
+                current_streak: 1, 
+                last_transaction_date: today 
+            }]);
+        } else {
+            // Jika sudah ada, cek apakah transaksi terakhir bukan hari ini
+            if (streakData.last_transaction_date !== today) {
+                await supabase
+                    .from('streaks')
+                    .update({ 
+                        current_streak: streakData.current_streak + 1, 
+                        last_transaction_date: today 
+                    })
+                    .eq('user_id', user_id);
+            }
+        }
+
+        res.status(201).json({ 
+            message: "Transaksi Berhasil!", 
+            transactionId: transaction_id,
+            total_bayar: total_amount,
+            total_laba: total_profit
         });
-    });
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
