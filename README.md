@@ -44,3 +44,57 @@ Buat file .env di root folder frontend agar bisa terhubung ke backend:
 Cuplikan kode
 VITE_API_URL=http://localhost:3000
 Jalankan aplikasi: npm run dev
+
+# 💰 LabaTrack
+
+> Aplikasi Fullstack Web untuk tracking laba dan manajemen keuangan UMKM secara praktis, otomatis, dan berbasis Cloud.
+
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+
+---
+
+## 📖 Deskripsi
+
+**LabaTrack** adalah solusi digital yang membantu pemilik UMKM memantau dan menganalisis keuntungan usaha mereka secara *real-time*. Dikembangkan dengan arsitektur **Modern Web**, LabaTrack mengubah pencatatan manual menjadi sistem otomatis yang akurat untuk mendukung perkembangan bisnis UMKM.
+
+---
+
+## ✨ Fitur Utama
+
+- 📊 **Dashboard Finansial** — Ringkasan laba harian & transaksi terbaru
+- 🛒 **Smart Cashier** — Perhitungan transaksi otomatis
+- 📈 **Kalkulator HPP** — Hitung harga pokok & margin keuntungan
+- 📦 **Manajemen Produk** — CRUD produk terintegrasi database
+- 🔐 **Autentikasi JWT** — Sistem login aman
+- ☁️ **Cloud Database** — Supabase PostgreSQL
+
+---
+
+## 🛠️ Teknologi yang Digunakan
+
+| Layer | Teknologi |
+|-------|----------|
+| Frontend | React.js (Vite) |
+| Backend | Node.js & Express.js |
+| Database | Supabase (PostgreSQL) |
+| Deployment | Vercel |
+
+---
+
+## 🚀 Cara Menjalankan Project (Local Setup)
+
+### 1. Clone Repository
+
+```bash
+# Frontend
+git clone https://github.com/rayyahanifah/labatrack.git
+
+# Backend
+git clone https://github.com/rayyahanifah/labatrack-backend.git
+
+2. Setup Backend
+cd labatrack-backend
+npm install
