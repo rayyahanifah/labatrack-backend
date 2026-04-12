@@ -13,3 +13,24 @@ Sistem Manajemen Keuangan UMKM untuk memantau laba dan stok secara real-time.
 - Node.js & Express
 - MySQL Database
 - Git & GitHub
+
+2. Konfigurasi Backend (Express.js)
+Masuk ke folder backend untuk mengatur koneksi server dan database:
+
+cd labatrack-backend
+
+npm install
+
+Buat file .env dan masukkan konfigurasi berikut:
+
+Cuplikan kode
+# API Key dari Supabase Dashboard (Settings > API)
+SUPABASE_URL=link_url_supabase_anda
+SUPABASE_ANON_KEY=key_anon_supabase_anda
+
+# Rahasia untuk enkripsi Token Login
+JWT_SECRET=kode_rahasia_jwt_anda
+
+# Port server lokal
+PORT=3000
+Jalankan server backend: npm run dev
