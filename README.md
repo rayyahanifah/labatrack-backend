@@ -31,3 +31,16 @@ JWT_SECRET=kode_rahasia_jwt_anda
 
 # Port server lokal
 PORT=3000
+
+3. Konfigurasi Frontend (React)
+Buka terminal baru untuk menjalankan antarmuka aplikasi:
+
+cd labatrack
+
+npm install
+
+Buat file .env di root folder frontend agar bisa terhubung ke backend:
+
+Cuplikan kode
+VITE_API_URL=http://localhost:3000
+Jalankan aplikasi: npm run dev
