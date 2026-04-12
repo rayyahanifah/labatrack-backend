@@ -30,7 +30,7 @@ SUPABASE_ANON_KEY=key_anon_supabase_anda
 JWT_SECRET=kode_rahasia_jwt_anda
 
 # Port server lokal
-PORT=3000
+PORT=3000```
 
 3. Konfigurasi Frontend (React)
 Buka terminal baru untuk menjalankan antarmuka aplikasi:
